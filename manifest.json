@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "Instagram Auto-Scroller",
+  "version": "1.5.2",
+  "description": "Auto-scrolls Instagram Reels with hotkeys",
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "permissions": [
+    "storage"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.instagram.com/*"
+      ],
+      "js": [
+        "content.js"
+      ]
+    }
+  ],
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["icon48.png"],
+      "matches": ["https://www.instagram.com/*"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}
