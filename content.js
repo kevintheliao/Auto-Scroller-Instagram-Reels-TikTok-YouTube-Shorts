@@ -627,7 +627,7 @@ function injectAutoScrollToastStyles() {
 
         #autoscroll-toast-unique-v1 {
             position: fixed;
-            right: 40px;
+            right: 80px;
             top: 20px;
             z-index: 2147483647;
             background: #f5f5f5;
@@ -882,7 +882,7 @@ function showAutoScrollToast(enabled) {
             <div class="toast-feedback">
                 Feedback? Click <a href="https://docs.google.com/forms/d/e/1FAIpQLScElo0xb6CCIPFu_AEp6t06LsUS3XDrpa6zshlIq8RTuCq-Fw/viewform?usp=publish-editor" target="_blank" rel="noopener noreferrer">here.</a>
             </div>
-            <div class="version-number">v1.5.2</div>
+            <div class="version-number">v1.5.3</div>
         `;
         expanded.appendChild(footer);
 
