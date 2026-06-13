@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Instagram Auto-Scroller",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "Auto-scrolls Instagram Reels with hotkeys",
   "action": {
     "default_popup": "popup.html"
