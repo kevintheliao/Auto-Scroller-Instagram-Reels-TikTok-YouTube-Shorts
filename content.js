@@ -9,6 +9,7 @@ class ReviewPopupManager {
         this.reviewPopupDismissed = false;
         this.initialized = false;
         this.stateLoaded = false;
+        this.pendingInteractions = 0;
         
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.init());
@@ -26,12 +27,9 @@ class ReviewPopupManager {
     }
 
     setupElements() {
-        if (document.getElementById('review-popup-card')) {
-            this.popupCard = document.getElementById('review-popup-card');
-            this.closeBtn = document.getElementById('review-popup-close-btn');
-            this.reviewBtn = document.getElementById('review-popup-review-btn');
-            this.laterBtn = document.getElementById('review-popup-later-btn');
-            return;
+        const existing = document.getElementById('review-popup-card');
+        if (existing) {
+            existing.remove();
         }
         
         const card = document.createElement('div');
@@ -85,33 +83,33 @@ class ReviewPopupManager {
                 width: auto;
                 z-index: 999999;
                 font-family: -apple-system, BlinkMacSystemFont, "Neue Haas Grotesk Text Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
-                animation: slideIn 0.3s ease-out;
+                animation: reviewFadeIn 0.1s ease-out;
             }
 
-            @keyframes slideIn {
+            @keyframes reviewFadeIn {
                 from {
                     opacity: 0;
-                    transform: translateX(400px);
+                    transform: translateY(-2px);
                 }
                 to {
                     opacity: 1;
-                    transform: translateX(0);
+                    transform: translateY(0);
                 }
             }
 
-            @keyframes slideOut {
+            @keyframes reviewFadeOut {
                 from {
                     opacity: 1;
-                    transform: translateX(0);
+                    transform: translateY(0);
                 }
                 to {
                     opacity: 0;
-                    transform: translateX(400px);
+                    transform: translateY(-2px);
                 }
             }
 
             #review-popup-card.review-popup-closing {
-                animation: slideOut 0.3s ease-out forwards;
+                animation: reviewFadeOut 0.1s ease-in forwards;
             }
 
             .review-popup-close {
@@ -199,23 +197,24 @@ class ReviewPopupManager {
             }
 
             .review-popup-btn-primary {
-                background: linear-gradient(135deg, #5b8fc4 0%, #4a6fa5 100%);
+                background: #6FC276;
                 color: white;
             }
 
             .review-popup-btn-primary:hover {
                 transform: translateY(-1px);
-                box-shadow: 0 4px 12px rgba(91, 143, 196, 0.4);
+                box-shadow: 0 4px 12px rgba(111, 194, 118, 0.4);
             }
 
             .review-popup-btn-secondary {
-                background: #f0f0f0;
-                color: #333;
+                background: #F47174;
+                color: white;
                 font-size: 12px;
             }
 
             .review-popup-btn-secondary:hover {
-                background: #e0e0e0;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(244, 113, 116, 0.4);
             }
 
             @media (max-width: 640px) {
@@ -241,7 +240,7 @@ class ReviewPopupManager {
                     action: 'openReviewPage',
                     url: 'https://chromewebstore.google.com/detail/instagram-auto-scroller/innfihfpikaokkljfakkdjahjjbjmnmc/reviews?hl=en&authuser=4'
                 });
-                this.hidePopup();
+                this.dismissPopup();
             });
         }
         if (this.laterBtn) {
@@ -252,10 +251,10 @@ class ReviewPopupManager {
     loadState() {
         try {
             chrome.storage.sync.get(['reviewInteractionCount', 'reviewLastShownAt', 'reviewPopupDismissed'], (data) => {
-                this.interactionCount = data.reviewInteractionCount || 0;
-                this.lastShownInteraction = data.reviewLastShownAt || 0;
-                this.reviewPopupDismissed = data.reviewPopupDismissed || false;
-                this.stateLoaded = true;
+                const res = data || {};
+                this.interactionCount = res.reviewInteractionCount || 0;
+                this.lastShownInteraction = res.reviewLastShownAt || 0;
+                this.reviewPopupDismissed = res.reviewPopupDismissed || false;
                 
                 if (!this.popupCard) {
                     this.setupElements();
@@ -265,6 +264,18 @@ class ReviewPopupManager {
                     count: this.interactionCount,
                     dismissed: this.reviewPopupDismissed
                 });
+                console.log('[ReviewPopup] If you need to reset the popup state for testing, run: window.reviewPopupManager.resetState()');
+                
+                // Mark state as loaded and process any pending interactions
+                this.stateLoaded = true;
+                if (this.pendingInteractions > 0) {
+                    console.log('[ReviewPopup] Processing', this.pendingInteractions, 'pending interactions');
+                    const pending = this.pendingInteractions;
+                    this.pendingInteractions = 0;
+                    for (let i = 0; i < pending; i++) {
+                        this.recordInteraction();
+                    }
+                }
             });
         } catch (e) {
             console.log('[ReviewPopup] Could not load state:', e);
@@ -295,7 +306,8 @@ class ReviewPopupManager {
 
     recordInteraction() {
         if (!this.stateLoaded) {
-            console.log('[ReviewPopup] State not loaded yet, waiting...');
+            console.log('[ReviewPopup] State not loaded yet, queueing interaction...');
+            this.pendingInteractions++;
             return;
         }
 
@@ -321,8 +333,8 @@ class ReviewPopupManager {
     showPopup() {
         console.log('[ReviewPopup] showPopup() called, popupCard exists?', !!this.popupCard);
         
-        if (!this.popupCard) {
-            console.log('[ReviewPopup] Creating popup card...');
+        if (!this.popupCard || !document.getElementById('review-popup-card')) {
+            console.log('[ReviewPopup] Creating/re-attaching popup card...');
             this.setupElements();
         }
         if (this.popupCard) {
@@ -343,7 +355,7 @@ class ReviewPopupManager {
                     this.popupCard.classList.add('review-popup-hidden');
                     this.popupCard.classList.remove('review-popup-closing');
                 }
-            }, 300);
+            }, 100);
             console.log('[ReviewPopup] Popup hidden');
         }
     }
@@ -363,6 +375,7 @@ class ReviewPopupManager {
 }
 
 const reviewPopupManager = new ReviewPopupManager();
+window.reviewPopupManager = reviewPopupManager;
 
 let lastVideo = null;
 let autoScrollEnabled = false;
@@ -467,7 +480,10 @@ function initializeAutoScrollCard() {
     }
 }
 
-chrome.storage.sync.get(["enabled", "preferredMuteState"], ({ enabled, preferredMuteState: savedMuteState }) => {
+chrome.storage.sync.get(["enabled", "preferredMuteState"], (data) => {
+    const res = data || {};
+    const enabled = res.enabled;
+    const savedMuteState = res.preferredMuteState;
     autoScrollEnabled = enabled;
     preferredMuteState = savedMuteState || false;
     preferredMuteStateApplied = false;
