@@ -1,3 +1,369 @@
+class ReviewPopupManager {
+    constructor() {
+        this.popupCard = null;
+        this.closeBtn = null;
+        this.reviewBtn = null;
+        this.laterBtn = null;
+        this.interactionCount = 0;
+        this.lastShownInteraction = 0;
+        this.reviewPopupDismissed = false;
+        this.initialized = false;
+        this.stateLoaded = false;
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.init());
+        } else {
+            this.init();
+        }
+    }
+
+    init() {
+        if (this.initialized) return;
+        this.initialized = true;
+        
+        this.injectStyles();
+        this.loadState();
+    }
+
+    setupElements() {
+        if (document.getElementById('review-popup-card')) {
+            this.popupCard = document.getElementById('review-popup-card');
+            this.closeBtn = document.getElementById('review-popup-close-btn');
+            this.reviewBtn = document.getElementById('review-popup-review-btn');
+            this.laterBtn = document.getElementById('review-popup-later-btn');
+            return;
+        }
+        
+        const card = document.createElement('div');
+        card.id = 'review-popup-card';
+        card.className = 'review-popup-card review-popup-hidden';
+        card.innerHTML = `
+            <button class="review-popup-close" id="review-popup-close-btn" aria-label="Close">×</button>
+            <div class="review-popup-card-content">
+                <div class="review-popup-icon"><img src="${chrome.runtime.getURL('icon48.png')}" alt="Logo" style="width: 32px; height: 32px;"></div>
+                <h2 class="review-popup-card-title">Love Instagram Auto-Scroller?</h2>
+                <p class="review-popup-card-message">Help us improve by leaving a review on the Chrome Web Store!</p>
+                <div class="review-popup-card-buttons">
+                    <button class="review-popup-btn review-popup-btn-primary" id="review-popup-review-btn">
+                        Leave a Review
+                    </button>
+                    <button class="review-popup-btn review-popup-btn-secondary" id="review-popup-later-btn">
+                        Maybe Later
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(card);
+        
+        this.popupCard = card;
+        this.closeBtn = document.getElementById('review-popup-close-btn');
+        this.reviewBtn = document.getElementById('review-popup-review-btn');
+        this.laterBtn = document.getElementById('review-popup-later-btn');
+        
+        this.setupEventListeners();
+    }
+
+    injectStyles() {
+        if (document.getElementById('review-popup-styles')) return;
+        
+        const style = document.createElement('style');
+        style.id = 'review-popup-styles';
+        style.textContent = `
+            .review-popup-hidden {
+                display: none !important;
+            }
+
+            #review-popup-card {
+                position: fixed;
+                top: 140px;
+                right: 80px;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                padding: 10px 12px;
+                max-width: 280px;
+                width: auto;
+                z-index: 999999;
+                font-family: -apple-system, BlinkMacSystemFont, "Neue Haas Grotesk Text Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+                animation: slideIn 0.3s ease-out;
+            }
+
+            @keyframes slideIn {
+                from {
+                    opacity: 0;
+                    transform: translateX(400px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+            }
+
+            @keyframes slideOut {
+                from {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+                to {
+                    opacity: 0;
+                    transform: translateX(400px);
+                }
+            }
+
+            #review-popup-card.review-popup-closing {
+                animation: slideOut 0.3s ease-out forwards;
+            }
+
+            .review-popup-close {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                background: none;
+                border: none;
+                font-size: 20px;
+                color: #999;
+                cursor: pointer;
+                padding: 0;
+                width: 24px;
+                height: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 50%;
+                transition: all 0.2s ease;
+            }
+
+            .review-popup-close:hover {
+                background: #f0f0f0;
+                color: #333;
+            }
+
+            .review-popup-card-content {
+                text-align: center;
+                padding-top: 4px;
+            }
+
+            .review-popup-icon {
+                font-size: 28px;
+                margin-bottom: 6px;
+                animation: bounce 0.6s ease-out;
+                display: inline-block;
+            }
+
+            @keyframes bounce {
+                0% {
+                    transform: scale(0.5);
+                    opacity: 0;
+                }
+                70% {
+                    transform: scale(1.1);
+                }
+                100% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+            }
+
+            .review-popup-card-title {
+                font-size: 13px;
+                font-weight: 600;
+                color: #333;
+                margin: 4px 0 2px 0;
+                padding: 0;
+            }
+
+            .review-popup-card-message {
+                font-size: 11px;
+                color: #666;
+                margin: 2px 0 8px 0;
+                line-height: 1.25;
+            }
+
+            .review-popup-card-buttons {
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .review-popup-btn {
+                padding: 6px 10px;
+                font-size: 11px;
+                font-weight: 600;
+                border-radius: 6px;
+                border: none;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                text-decoration: none;
+                display: inline-block;
+                text-align: center;
+            }
+
+            .review-popup-btn-primary {
+                background: linear-gradient(135deg, #5b8fc4 0%, #4a6fa5 100%);
+                color: white;
+            }
+
+            .review-popup-btn-primary:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(91, 143, 196, 0.4);
+            }
+
+            .review-popup-btn-secondary {
+                background: #f0f0f0;
+                color: #333;
+                font-size: 12px;
+            }
+
+            .review-popup-btn-secondary:hover {
+                background: #e0e0e0;
+            }
+
+            @media (max-width: 640px) {
+                #review-popup-card {
+                    top: 10px;
+                    right: 10px;
+                    left: 10px;
+                    width: calc(100% - 20px);
+                    max-width: none;
+                }
+            }
+        `;
+        document.documentElement.appendChild(style);
+    }
+
+    setupEventListeners() {
+        if (this.closeBtn) {
+            this.closeBtn.addEventListener('click', () => this.hidePopup());
+        }
+        if (this.reviewBtn) {
+            this.reviewBtn.addEventListener('click', () => {
+                chrome.runtime.sendMessage({ 
+                    action: 'openReviewPage',
+                    url: 'https://chromewebstore.google.com/detail/instagram-auto-scroller/innfihfpikaokkljfakkdjahjjbjmnmc/reviews?hl=en&authuser=4'
+                });
+                this.hidePopup();
+            });
+        }
+        if (this.laterBtn) {
+            this.laterBtn.addEventListener('click', () => this.hidePopup());
+        }
+    }
+
+    loadState() {
+        try {
+            chrome.storage.sync.get(['reviewInteractionCount', 'reviewLastShownAt', 'reviewPopupDismissed'], (data) => {
+                this.interactionCount = data.reviewInteractionCount || 0;
+                this.lastShownInteraction = data.reviewLastShownAt || 0;
+                this.reviewPopupDismissed = data.reviewPopupDismissed || false;
+                this.stateLoaded = true;
+                
+                if (!this.popupCard) {
+                    this.setupElements();
+                }
+                
+                console.log('[ReviewPopup] State loaded:', {
+                    count: this.interactionCount,
+                    dismissed: this.reviewPopupDismissed
+                });
+            });
+        } catch (e) {
+            console.log('[ReviewPopup] Could not load state:', e);
+            this.stateLoaded = true;
+        }
+    }
+
+    saveState() {
+        try {
+            chrome.storage.sync.set({
+                reviewInteractionCount: this.interactionCount,
+                reviewLastShownAt: this.lastShownInteraction,
+                reviewPopupDismissed: this.reviewPopupDismissed
+            });
+        } catch (e) {
+            console.log('[ReviewPopup] Could not save state:', e);
+        }
+    }
+
+    shouldShowPopup() {
+        if (this.reviewPopupDismissed) return false;
+
+        const count = this.interactionCount;
+
+        const frequencies = [3, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000];
+        return frequencies.includes(count);
+    }
+
+    recordInteraction() {
+        if (!this.stateLoaded) {
+            console.log('[ReviewPopup] State not loaded yet, waiting...');
+            return;
+        }
+
+        const countBefore = this.interactionCount;
+        this.interactionCount++;
+        console.log('[ReviewPopup] Interaction recorded:', countBefore, '->', this.interactionCount);
+        
+        this.saveState();
+
+        const shouldShow = this.shouldShowPopup();
+        console.log('[ReviewPopup] Should show popup?', shouldShow, '(count:', this.interactionCount, ', dismissed:', this.reviewPopupDismissed, ')');
+        
+        if (shouldShow) {
+            console.log('[ReviewPopup] Showing popup at interaction', this.interactionCount);
+            this.lastShownInteraction = this.interactionCount;
+            this.saveState();
+            this.showPopup();
+        } else {
+            console.log('[ReviewPopup] Skipping popup (frequencies: [3,5,10,20,50,100,200,500,1000,2000,5000])');
+        }
+    }
+
+    showPopup() {
+        console.log('[ReviewPopup] showPopup() called, popupCard exists?', !!this.popupCard);
+        
+        if (!this.popupCard) {
+            console.log('[ReviewPopup] Creating popup card...');
+            this.setupElements();
+        }
+        if (this.popupCard) {
+            console.log('[ReviewPopup] Removing hidden class, card HTML:', this.popupCard.outerHTML.substring(0, 100));
+            this.popupCard.classList.remove('review-popup-hidden');
+            this.popupCard.classList.remove('review-popup-closing');
+            console.log('[ReviewPopup] Popup shown, classes:', this.popupCard.className);
+        } else {
+            console.log('[ReviewPopup] ERROR: popupCard is null after setupElements!');
+        }
+    }
+
+    hidePopup() {
+        if (this.popupCard) {
+            this.popupCard.classList.add('review-popup-closing');
+            setTimeout(() => {
+                if (this.popupCard) {
+                    this.popupCard.classList.add('review-popup-hidden');
+                    this.popupCard.classList.remove('review-popup-closing');
+                }
+            }, 300);
+            console.log('[ReviewPopup] Popup hidden');
+        }
+    }
+
+    dismissPopup() {
+        this.reviewPopupDismissed = true;
+        this.saveState();
+        this.hidePopup();
+    }
+
+    resetState() {
+        this.interactionCount = 0;
+        this.lastShownInteraction = 0;
+        this.reviewPopupDismissed = false;
+        this.saveState();
+    }
+}
+
+const reviewPopupManager = new ReviewPopupManager();
+
 let lastVideo = null;
 let autoScrollEnabled = false;
 let watchdogIntervalId = null;
@@ -145,6 +511,10 @@ function scrollDown() {
     if (!currentVideo) return;
 
     if (areCommentsOpen()) return;
+
+    if (reviewPopupManager) {
+        reviewPopupManager.recordInteraction();
+    }
 
     const currentIndex = allVideos.findIndex(v => v === currentVideo);
     const nextVideo = allVideos[currentIndex + 1];
@@ -807,11 +1177,8 @@ function showAutoScrollToast(enabled) {
             document.documentElement.appendChild(el);
         }
 
-        // Clear previous content
         el.innerHTML = '';
         el.style.display = 'flex';
-
-        // Create header (always visible)
         const header = document.createElement('div');
         header.className = 'toast-header';
         
@@ -832,12 +1199,8 @@ function showAutoScrollToast(enabled) {
         header.appendChild(chevron);
         
         el.appendChild(header);
-
-        // Create expanded content (visible on hover)
         const expanded = document.createElement('div');
         expanded.className = 'toast-expanded';
-
-        // Card 1: Toggle
         const card1 = document.createElement('div');
         card1.className = 'toast-card';
         card1.innerHTML = `
@@ -848,8 +1211,6 @@ function showAutoScrollToast(enabled) {
             </label>
         `;
         expanded.appendChild(card1);
-
-        // Card 2: Keyboard shortcuts
         const card2 = document.createElement('div');
         card2.className = 'toast-card';
         card2.innerHTML = `
@@ -874,8 +1235,6 @@ function showAutoScrollToast(enabled) {
             </ul>
         `;
         expanded.appendChild(card2);
-
-        // Footer
         const footer = document.createElement('div');
         footer.className = 'toast-footer';
         footer.innerHTML = `
@@ -887,8 +1246,6 @@ function showAutoScrollToast(enabled) {
         expanded.appendChild(footer);
 
         el.appendChild(expanded);
-
-        // Add toggle functionality to the checkbox in the expanded card
         const toastCheckbox = el.querySelector('#toast-enabled');
         if (toastCheckbox) {
             toastCheckbox.addEventListener('change', (e) => {
@@ -947,7 +1304,7 @@ function showMuteToast(muted) {
             el = document.createElement('div');
             el.id = id;
             el.style.position = 'fixed';
-            el.style.right = '40px';
+            el.style.right = '80px';
             el.style.top = '70px';
             el.style.zIndex = '2147483647';
             el.style.background = '#555';
@@ -967,7 +1324,6 @@ function showMuteToast(muted) {
             document.documentElement.appendChild(el);
         }
 
-        // Remove the hide class to trigger entrance animation
         el.classList.remove('hide');
 
         if (el.children.length === 0) {
@@ -982,14 +1338,13 @@ function showMuteToast(muted) {
         }
         el.style.display = 'flex';
         
-        // Auto-hide after 2 seconds with exit animation
         if (el._muteToastTimeout) {
             clearTimeout(el._muteToastTimeout);
         }
         el._muteToastTimeout = setTimeout(() => {
             el.classList.add('hide');
             setTimeout(() => {
-                el.style.display = 'none';
+                el.remove(); // Remove from DOM so animation re-triggers next time
             }, 300); // Match animation duration
         }, 2000);
     } catch (e) { }
@@ -1010,7 +1365,6 @@ chrome.storage.onChanged.addListener((changes, area) => {
     }
 });
 
-// Ensure auto scroll card is visible when page is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeAutoScrollCard);
 } else {
