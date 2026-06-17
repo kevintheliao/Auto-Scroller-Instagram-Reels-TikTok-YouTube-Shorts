@@ -67,7 +67,7 @@ Found a bug or have a feature request? [Submit feedback here](https://docs.googl
 
 ## Version
 
-Current version: 1.5.2
+Current version: 1.6.1
 
 ## Files
 
