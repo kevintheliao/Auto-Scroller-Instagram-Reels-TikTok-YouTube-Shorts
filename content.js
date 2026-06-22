@@ -10,7 +10,7 @@ class ReviewPopupManager {
         this.initialized = false;
         this.stateLoaded = false;
         this.pendingInteractions = 0;
-        
+
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.init());
         } else {
@@ -21,7 +21,7 @@ class ReviewPopupManager {
     init() {
         if (this.initialized) return;
         this.initialized = true;
-        
+
         this.injectStyles();
         this.loadState();
     }
@@ -31,7 +31,7 @@ class ReviewPopupManager {
         if (existing) {
             existing.remove();
         }
-        
+
         const card = document.createElement('div');
         card.id = 'review-popup-card';
         card.className = 'review-popup-card review-popup-hidden';
@@ -52,18 +52,18 @@ class ReviewPopupManager {
             </div>
         `;
         document.body.appendChild(card);
-        
+
         this.popupCard = card;
         this.closeBtn = document.getElementById('review-popup-close-btn');
         this.reviewBtn = document.getElementById('review-popup-review-btn');
         this.laterBtn = document.getElementById('review-popup-later-btn');
-        
+
         this.setupEventListeners();
     }
 
     injectStyles() {
         if (document.getElementById('review-popup-styles')) return;
-        
+
         const style = document.createElement('style');
         style.id = 'review-popup-styles';
         style.textContent = `
@@ -236,7 +236,7 @@ class ReviewPopupManager {
         }
         if (this.reviewBtn) {
             this.reviewBtn.addEventListener('click', () => {
-                chrome.runtime.sendMessage({ 
+                chrome.runtime.sendMessage({
                     action: 'openReviewPage',
                     url: 'https://chromewebstore.google.com/detail/instagram-auto-scroller/innfihfpikaokkljfakkdjahjjbjmnmc/reviews?hl=en&authuser=4'
                 });
@@ -255,17 +255,17 @@ class ReviewPopupManager {
                 this.interactionCount = res.reviewInteractionCount || 0;
                 this.lastShownInteraction = res.reviewLastShownAt || 0;
                 this.reviewPopupDismissed = res.reviewPopupDismissed || false;
-                
+
                 if (!this.popupCard) {
                     this.setupElements();
                 }
-                
+
                 console.log('[ReviewPopup] State loaded:', {
                     count: this.interactionCount,
                     dismissed: this.reviewPopupDismissed
                 });
                 console.log('[ReviewPopup] If you need to reset the popup state for testing, run: window.reviewPopupManager.resetState()');
-                
+
                 // Mark state as loaded and process any pending interactions
                 this.stateLoaded = true;
                 if (this.pendingInteractions > 0) {
@@ -298,9 +298,13 @@ class ReviewPopupManager {
     shouldShowPopup() {
         if (this.reviewPopupDismissed) return false;
 
-        const count = this.interactionCount;
+        if (this.interactionCount === 101) {
+            this.interactionCount = 50;
+        }
 
-        const frequencies = [3, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000];
+        const count = this.interactionCount;
+        const frequencies = [3, 5, 10, 20, 50, 100];
+
         return frequencies.includes(count);
     }
 
@@ -314,12 +318,12 @@ class ReviewPopupManager {
         const countBefore = this.interactionCount;
         this.interactionCount++;
         console.log('[ReviewPopup] Interaction recorded:', countBefore, '->', this.interactionCount);
-        
+
         this.saveState();
 
         const shouldShow = this.shouldShowPopup();
         console.log('[ReviewPopup] Should show popup?', shouldShow, '(count:', this.interactionCount, ', dismissed:', this.reviewPopupDismissed, ')');
-        
+
         if (shouldShow) {
             console.log('[ReviewPopup] Showing popup at interaction', this.interactionCount);
             this.lastShownInteraction = this.interactionCount;
@@ -332,7 +336,7 @@ class ReviewPopupManager {
 
     showPopup() {
         console.log('[ReviewPopup] showPopup() called, popupCard exists?', !!this.popupCard);
-        
+
         if (!this.popupCard || !document.getElementById('review-popup-card')) {
             console.log('[ReviewPopup] Creating/re-attaching popup card...');
             this.setupElements();
@@ -409,7 +413,7 @@ function syncCommentsOpenState() {
                 if (currentVideo === videoWhenCommentsStartedClosing) {
                     try {
                         scrollDown();
-                    } catch (e) {}
+                    } catch (e) { }
                 }
                 videoWhenCommentsStartedClosing = null;
             }, 20);
@@ -420,11 +424,11 @@ function syncCommentsOpenState() {
 function runWatchdog() {
     try {
         syncCommentsOpenState();
-    } catch (_) {}
+    } catch (_) { }
     if (autoScrollEnabled) {
         try {
             setupVideoEndListener();
-        } catch (_) {}
+        } catch (_) { }
     }
 }
 
@@ -546,7 +550,7 @@ function scrollDown() {
 
 function setupVideoEndListener() {
     const video = getCurrentVideo();
-    
+
     if (!video) return;
 
     if (video === lastVideo) return;
@@ -569,7 +573,7 @@ function setupVideoEndListener() {
         video.muted = preferredMuteState;
         preferredMuteStateApplied = true;
     }
-    
+
     lastVideo = video;
 }
 
@@ -677,7 +681,7 @@ function pickSvgInReelActions(video, selectors) {
             try {
                 const el = scope.querySelector(sel);
                 if (el && isSvgVisible(el)) return el;
-            } catch (_) {}
+            } catch (_) { }
         }
     }
 
@@ -725,7 +729,7 @@ function safeClick(el) {
         try {
             const ev = new Ctor(type, Object.assign({}, base, extra || {}));
             el.dispatchEvent(ev);
-        } catch (_) {}
+        } catch (_) { }
     };
     try {
         if (typeof el.focus === "function") {
@@ -734,10 +738,10 @@ function safeClick(el) {
             } catch (_) {
                 try {
                     el.focus();
-                } catch (_) {}
+                } catch (_) { }
             }
         }
-    } catch (_) {}
+    } catch (_) { }
     try {
         if (typeof PointerEvent !== "undefined") {
             fire(PointerEvent, "pointerover", { pointerId: 1, pointerType: "mouse", isPrimary: true });
@@ -810,13 +814,13 @@ function getInstagramAudioToggle(video) {
 
     const allVideos = Array.from(document.querySelectorAll("video"));
     const idx = allVideos.indexOf(video);
-    
+
     const globalPlaying = Array.from(document.querySelectorAll('svg[aria-label="Audio is playing"]')).filter(isSvgVisible);
     if (globalPlaying.length) {
         const pick = idx >= 0 && idx < globalPlaying.length ? globalPlaying[idx] : globalPlaying[globalPlaying.length - 1];
         if (pick) return { clickEl: resolveInstagramAudioClickTarget(pick), state: "unmuted" };
     }
-    
+
     const globalMuted = Array.from(document.querySelectorAll('svg[aria-label="Audio is muted"]')).filter(isSvgVisible);
     if (globalMuted.length) {
         const pick = idx >= 0 && idx < globalMuted.length ? globalMuted[idx] : globalMuted[globalMuted.length - 1];
@@ -830,7 +834,7 @@ function instaPointerTap(el) {
     if (!el) return false;
     try {
         el.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
-    } catch (_) {}
+    } catch (_) { }
     const r = el.getBoundingClientRect();
     const x = Math.floor(r.left + Math.min(Math.max(r.width / 2, 2), r.width - 2));
     const y = Math.floor(r.top + Math.min(Math.max(r.height / 2, 2), r.height - 2));
@@ -877,7 +881,7 @@ function toggleAudioForVideo(video) {
     try {
         video.muted = !video.muted;
         showMuteToast(!!video.muted);
-    } catch (_) {}
+    } catch (_) { }
 }
 
 function getLikeToggleTargetForVideo(video) {
@@ -967,7 +971,7 @@ document.addEventListener('keydown', (e) => {
         } catch (err) { }
         try {
             showAutoScrollToast(autoScrollEnabled);
-        } catch (e) {}
+        } catch (e) { }
         if (autoScrollEnabled) {
             setupVideoEndListener();
         } else {
@@ -1197,23 +1201,23 @@ function showAutoScrollToast(enabled) {
         el.style.display = 'flex';
         const header = document.createElement('div');
         header.className = 'toast-header';
-        
+
         const img = document.createElement('img');
         img.src = chrome.runtime.getURL('icon48.png');
         img.style.width = '24px';
         img.style.height = '24px';
         img.style.flexShrink = '0';
         header.appendChild(img);
-        
+
         const text = document.createElement('span');
         text.id = 'autoscroll-text';
         text.textContent = `Auto Scroll: ${enabled ? 'On' : 'Off'}`;
         header.appendChild(text);
-        
+
         const chevron = document.createElement('span');
         chevron.className = 'toast-chevron';
         header.appendChild(chevron);
-        
+
         el.appendChild(header);
         const expanded = document.createElement('div');
         expanded.className = 'toast-expanded';
@@ -1257,7 +1261,7 @@ function showAutoScrollToast(enabled) {
             <div class="toast-feedback">
                 Feedback? Click <a href="https://docs.google.com/forms/d/e/1FAIpQLScElo0xb6CCIPFu_AEp6t06LsUS3XDrpa6zshlIq8RTuCq-Fw/viewform?usp=publish-editor" target="_blank" rel="noopener noreferrer">here.</a>
             </div>
-            <div class="version-number">v1.5.3</div>
+            <div class="version-number">v1.6.2</div>
         `;
         expanded.appendChild(footer);
 
@@ -1353,7 +1357,7 @@ function showMuteToast(muted) {
             textEl.textContent = muted ? 'Video Muted' : 'Video Unmuted';
         }
         el.style.display = 'flex';
-        
+
         if (el._muteToastTimeout) {
             clearTimeout(el._muteToastTimeout);
         }
@@ -1374,7 +1378,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
             if (isRelevantPage()) {
                 showAutoScrollToast(autoScrollEnabled);
             }
-        } catch (e) {}
+        } catch (e) { }
     }
     if (changes.preferredMuteState) {
         preferredMuteState = !!changes.preferredMuteState.newValue;
