@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Instagram Auto-Scroller",
-  "version": "1.6.2",
-  "description": "Auto-scrolls Instagram Reels with hotkeys",
+  "name": "Instagram Auto Scroller — Hands-Free Reels & Feed",
+  "version": "1.6.4",
+  "description": "Auto-scroll Instagram Reels & videos hands-free. Plays the next Reel automatically when one ends. Control with simple hotkeys.",
   "action": {
     "default_popup": "popup.html"
   },
