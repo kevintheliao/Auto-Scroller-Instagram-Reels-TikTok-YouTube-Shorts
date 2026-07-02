@@ -364,6 +364,19 @@ class ReviewPopupManager {
         }
     }
 
+    hidePopupForever() {
+        if (localStorage.getItem('popupHidden') === 'true') {
+            this.popupElement.style.display = 'none'; 
+            return; 
+        }
+
+        this.reviewBtn.addEventListener('click', () => {
+            this.popupElement.style.display = 'none'; 
+
+            localStorage.setItem('popupHidden', 'true');
+        }, { once: true });
+    }
+
     dismissPopup() {
         this.reviewPopupDismissed = true;
         this.saveState();
