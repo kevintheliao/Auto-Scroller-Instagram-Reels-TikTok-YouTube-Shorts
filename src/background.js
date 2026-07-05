@@ -11,8 +11,17 @@ function startUp() {
     })
 }
 
-chrome.runtime.onInstalled.addListener(() => {
-    chrome.storage.sync.set({ enabled: false});
+chrome.runtime.onInstalled.addListener((details) => {
+    // Only default on fresh install; an update must not reset the user's toggle.
+    if (details.reason === "install") {
+        chrome.storage.sync.set({ enabled: false });
+    }
+
+    const version = chrome.runtime.getManifest().version;
+    const isRealUpdate = details.reason === "update" && details.previousVersion !== version;
+    if (details.reason === "install" || isRealUpdate) {
+        chrome.tabs.create({ url: chrome.runtime.getURL("whatsnew.html") });
+    }
 });
 
 chrome.runtime.onStartup.addListener(startUp)

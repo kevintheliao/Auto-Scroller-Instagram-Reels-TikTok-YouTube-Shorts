@@ -1,24 +1,22 @@
-# Instagram Reels Auto-Scroller
+# Auto Scroller — Instagram Reels, TikTok & YouTube Shorts
 
-A Chrome extension that automatically scrolls through Instagram Reels with convenient keyboard shortcuts and controls.
+A Chrome extension that automatically scrolls through Instagram Reels, TikTok videos and YouTube Shorts, with convenient keyboard shortcuts and on-page controls.
 
 ## Features
 
-- **Auto-Scroll**: Automatically scroll to the next Reel when the current one ends
-- **Keyboard Shortcuts**:
-  - `R` - Toggle auto-scroll on/off
-  - `F` - Like/Unlike current Reel
-  - `C` - Open/Close comments
-  - `M` - Mute/Unmute audio
-- **Toast Notifications**: Visual feedback for actions and settings
-- **Smart Detection**: Automatically detects when you're on Instagram and relevant pages
-- **Comments Detection**: Pauses auto-scroll when comments are open, resumes when closed
+- **Auto-Scroll**: Automatically advances to the next video when the current one ends
+  - Instagram Reels & feed videos
+  - TikTok For You / Following feeds
+  - YouTube Shorts
+- **Keyboard Shortcuts** (per platform, see table below)
+- **On-page control card**: Appears in the top-right corner of all three sites — hover to toggle auto-scroll and see shortcuts
+- **Comments Detection**: Pauses auto-scroll while comments are open, resumes when closed
+- **What's New page**: Opens automatically after installing or updating
 
 ## Installation
 
 **EASIEST WAY:**
-1. Go to [https://chromewebstore.google.com/detail/instagram-auto-scroller/innfihfpikaokkljfakkdjahjjbjmnmc?authuser=4&hl=en
-](url)
+1. Go to the [Chrome Web Store listing](https://chromewebstore.google.com/detail/instagram-auto-scroller/innfihfpikaokkljfakkdjahjjbjmnmc?authuser=4&hl=en)
 2. Click "Add To Chrome"
 3. Click on the extension icon in the Chrome toolbar and enable the extension
 
@@ -27,24 +25,19 @@ OR:
 1. Download or clone this repository
 2. Open Chrome and go to `chrome://extensions/`
 3. Enable "Developer mode" (top right corner)
-4. Click "Load unpacked" and select the project directory
+4. Click "Load unpacked" and select the `src` directory
 5. The extension will appear in your Chrome toolbar
 
 ## Usage
 
 Once installed, the extension adds:
 - **Icon in toolbar**: Click to open the popup and see controls
-- **Toast overlay**: Appears on Instagram pages showing auto-scroll status (hover to expand)
-- **Keyboard shortcuts**: Work anywhere on Instagram when not typing in text fields
-
-### Controls
-
-Click the extension icon to access:
-- Toggle auto-scroll on/off
-- View keyboard shortcuts
-- Send feedback
+- **Control card overlay**: Appears on Instagram, TikTok and YouTube Shorts pages showing auto-scroll status (hover to expand)
+- **Keyboard shortcuts**: Work anywhere on the supported sites when not typing in text fields
 
 ## Keyboard Shortcuts
+
+### Instagram & TikTok
 
 | Shortcut | Action |
 |----------|--------|
@@ -52,6 +45,16 @@ Click the extension icon to access:
 | F | Like/Unlike |
 | C | Open/Close Comments |
 | M | Mute/Unmute |
+
+### YouTube Shorts
+
+| Shortcut | Action |
+|----------|--------|
+| R | Toggle Auto Scroll |
+| E | Like/Unlike |
+| M | Mute/Unmute (YouTube built-in) |
+| C | Captions (YouTube built-in) |
+| F | Fullscreen (YouTube built-in) |
 
 **Note**: Shortcuts are disabled when typing in text input fields.
 
@@ -67,13 +70,15 @@ Found a bug or have a feature request? [Submit feedback here](https://docs.googl
 
 ## Version
 
-Current version: 1.6.1
+Current version: 2.1.3
 
 ## Files
 
 - `src/manifest.json` - Extension configuration
-- `src/background.js` - Background service worker
-- `src/content.js` - Content script for Instagram pages
+- `src/background.js` - Background service worker (badge, what's-new tab)
+- `src/content.js` - Content script for Instagram, TikTok and YouTube pages
+- `src/main-world.js` - TikTok main-world bridge (React click handling)
+- `src/whatsnew.html` - What's-new page shown after install/update
 - `src/popup.html` - Popup UI
 - `src/popup.js` - Popup script
 - `src/popup.css` - Popup styles
