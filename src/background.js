@@ -16,12 +16,6 @@ chrome.runtime.onInstalled.addListener((details) => {
     if (details.reason === "install") {
         chrome.storage.sync.set({ enabled: false });
     }
-
-    const version = chrome.runtime.getManifest().version;
-    const isRealUpdate = details.reason === "update" && details.previousVersion !== version;
-    if (details.reason === "install" || isRealUpdate) {
-        chrome.tabs.create({ url: chrome.runtime.getURL("whatsnew.html") });
-    }
 });
 
 chrome.runtime.onStartup.addListener(startUp)
