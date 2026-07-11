@@ -482,6 +482,30 @@ function startWatchdog() {
     watchdogIntervalId = setInterval(runWatchdog, 400);
 }
 
+// TikTok's comment column is anchored to the right edge, exactly where the
+// card lives; when it's open, return its left edge so the card can dodge it.
+function getTikTokCommentPanelLeft() {
+    if (SITE !== 'tiktok') return null;
+    const sels = ['[data-e2e="comment-list"]', '[class*="CommentListContainer"]', '[class*="CommentList"]'];
+    for (const sel of sels) {
+        let els;
+        try { els = document.querySelectorAll(sel); } catch (_) { continue; }
+        for (const el of els) {
+            const r = el.getBoundingClientRect();
+            if (r.width > 150 && r.height > 200 && r.right > window.innerWidth - 260 && r.left > window.innerWidth / 3) {
+                return r.left;
+            }
+        }
+    }
+    return null;
+}
+
+function currentToastRight() {
+    const panelLeft = getTikTokCommentPanelLeft();
+    if (panelLeft == null) return TOAST_POSITION.right;
+    return Math.round(window.innerWidth - panelLeft + 12) + 'px';
+}
+
 function updateToastVisibility() {
     const p = (location.pathname || '/').toLowerCase();
     const toastElement = document.getElementById('autoscroll-toast-unique-v1');
@@ -500,6 +524,11 @@ function updateToastVisibility() {
             showAutoScrollToast(autoScrollEnabled);
         } else if (toastElement.style.display === 'none') {
             toastElement.style.display = 'flex';
+        }
+        const shown = document.getElementById('autoscroll-toast-unique-v1');
+        if (shown) {
+            const right = currentToastRight();
+            if (shown.style.right !== right) shown.style.right = right;
         }
     } else if (toastElement) {
         toastElement.style.display = 'none';
@@ -959,42 +988,6 @@ function getInstagramAudioToggle(video) {
     return { clickEl: null, state: "unknown" };
 }
 
-function instaPointerTap(el) {
-    if (!el) return false;
-    try {
-        el.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
-    } catch (_) { }
-    const r = el.getBoundingClientRect();
-    const x = Math.floor(r.left + Math.min(Math.max(r.width / 2, 2), r.width - 2));
-    const y = Math.floor(r.top + Math.min(Math.max(r.height / 2, 2), r.height - 2));
-    let hit = null;
-    try {
-        hit = document.elementFromPoint(x, y);
-    } catch (_) {
-        hit = null;
-    }
-    const leaf = hit && el.contains(hit) ? hit : el;
-    const mk = (type, buttons) =>
-        new MouseEvent(type, {
-            bubbles: true,
-            cancelable: true,
-            composed: true,
-            view: window,
-            clientX: x,
-            clientY: y,
-            button: 0,
-            buttons: buttons != null ? buttons : 0,
-        });
-    try {
-        leaf.dispatchEvent(mk("mousedown", 1));
-        leaf.dispatchEvent(mk("mouseup", 0));
-        if (typeof leaf.click === "function") leaf.click();
-        leaf.dispatchEvent(mk("click", 0));
-        return true;
-    } catch (_) {
-        return false;
-    }
-}
 
 function pickNearestToVideo(video, selector) {
     const els = Array.from(document.querySelectorAll(selector)).filter(isSvgVisible);
@@ -1026,12 +1019,10 @@ function toggleAudioForVideo(video) {
     }
     const { clickEl, state } = getInstagramAudioToggle(video);
     if (clickEl) {
-        const ok = instaPointerTap(clickEl) || safeClick(clickEl);
-        if (ok) {
-            if (state === "unmuted") showMuteToast(true);
-            else if (state === "muted") showMuteToast(false);
-            return;
-        }
+        reactPropsClick(clickEl);
+        if (state === "unmuted") showMuteToast(true);
+        else if (state === "muted") showMuteToast(false);
+        return;
     }
     try {
         video.muted = !video.muted;
@@ -1045,9 +1036,10 @@ function getLikeToggleTargetForVideo(video) {
     return closestClickTarget(svg);
 }
 
-// TikTok's React handlers ignore synthetic clicks (isTrusted check). Mark the
-// button and signal main-world.js, which calls the React onClick prop directly.
-function tiktokReactClick(el) {
+// TikTok and Instagram's audio control ignore synthetic clicks (isTrusted
+// check). Mark the button and signal main-world.js, which calls the React
+// onClick prop directly.
+function reactPropsClick(el) {
     if (!el) return;
     try {
         el.setAttribute('data-igas-click', '1');
@@ -1067,7 +1059,7 @@ function toggleLikeForVideo(video) {
     if (SITE === 'tiktok') {
         const icon = pickNearestToVideo(video, '[data-e2e="like-icon"], [data-e2e="browse-like-icon"]');
         const target = icon && closestClickTarget(icon);
-        if (target) tiktokReactClick(target);
+        if (target) reactPropsClick(target);
         return;
     }
     const target = getLikeToggleTargetForVideo(video);
@@ -1102,7 +1094,7 @@ function toggleCommentsForVideo(video) {
     if (SITE === 'tiktok') {
         const icon = pickNearestToVideo(video, '[data-e2e="comment-icon"], [data-e2e="browse-comment-icon"]');
         const target = icon && closestClickTarget(icon);
-        if (target) tiktokReactClick(target);
+        if (target) reactPropsClick(target);
         return;
     }
     const target = getCommentToggleTargetForVideo(video);
@@ -1228,6 +1220,7 @@ function injectAutoScrollToastStyles() {
             flex-direction: column;
             gap: 0;
             box-sizing: border-box;
+            transition: right 0.2s ease;
         }
 
         /* Neutralize host-page CSS so the card renders identically on every site. */
@@ -1482,13 +1475,15 @@ function showAutoScrollToast(enabled) {
             </ul>${shortcutNote}
         `;
         expanded.appendChild(card2);
+        let extVersion = '';
+        try { extVersion = 'v' + chrome.runtime.getManifest().version; } catch (_) { }
         const footer = document.createElement('div');
         footer.className = 'toast-footer';
         footer.innerHTML = `
             <div class="toast-feedback">
                 Feedback? Click <a href="https://docs.google.com/forms/d/e/1FAIpQLScElo0xb6CCIPFu_AEp6t06LsUS3XDrpa6zshlIq8RTuCq-Fw/viewform?usp=publish-editor" target="_blank" rel="noopener noreferrer">here.</a>
             </div>
-            <div class="version-number">v1.7.0</div>
+            <div class="version-number">${extVersion}</div>
         `;
         expanded.appendChild(footer);
 
@@ -1551,7 +1546,7 @@ function showMuteToast(muted) {
             el = document.createElement('div');
             el.id = id;
             el.style.position = 'fixed';
-            el.style.right = TOAST_POSITION.right;
+            el.style.right = currentToastRight();
             el.style.top = TOAST_POSITION.muteTop;
             el.style.zIndex = '2147483647';
             el.style.background = '#555';

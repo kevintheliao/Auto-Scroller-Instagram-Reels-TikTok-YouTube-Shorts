@@ -1,9 +1,9 @@
 "use strict";
 
-// Runs in the page (MAIN) world on TikTok. TikTok's React handlers ignore
-// synthetic DOM clicks (isTrusted check), so the isolated-world content script
-// marks a button with data-igas-click and fires this event; here we can reach
-// React's onClick prop directly and call it.
+// Runs in the page (MAIN) world on TikTok and Instagram. Their React handlers
+// ignore synthetic DOM clicks (isTrusted check), so the isolated-world content
+// script marks a button with data-igas-click and fires this event; here we can
+// reach React's onClick prop directly and call it.
 window.addEventListener("igas-react-click", () => {
     const el = document.querySelector("[data-igas-click]");
     if (!el) return;
