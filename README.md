@@ -70,7 +70,7 @@ Found a bug or have a feature request? [Submit feedback here](https://docs.googl
 
 ## Version
 
-Current version: 2.1.3
+Current version: 2.1.4
 
 ## Files
 
