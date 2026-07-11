@@ -2,6 +2,11 @@
 
 const checkbox = document.getElementById("enabled");
 
+const versionEl = document.querySelector(".version.number");
+if (versionEl) {
+    versionEl.textContent = "v" + chrome.runtime.getManifest().version;
+}
+
 chrome.storage.sync.get("enabled", (data) => {
     checkbox.checked = !!data.enabled;
 });
