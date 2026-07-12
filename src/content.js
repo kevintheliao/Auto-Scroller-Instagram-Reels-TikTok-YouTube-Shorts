@@ -1389,6 +1389,13 @@ function injectAutoScrollToastStyles() {
     document.documentElement.appendChild(style);
 }
 
+function platformToastIcon() {
+    const host = location.hostname;
+    if (host.includes('youtube.com')) return 'icon48-youtube.png';
+    if (host.includes('tiktok.com')) return 'icon48-tiktok.png';
+    return 'icon48.png';
+}
+
 function showAutoScrollToast(enabled) {
     if (!isRelevantPage()) return;
     try {
@@ -1407,7 +1414,7 @@ function showAutoScrollToast(enabled) {
         header.className = 'toast-header';
 
         const img = document.createElement('img');
-        img.src = chrome.runtime.getURL('icon48.png');
+        img.src = chrome.runtime.getURL(platformToastIcon());
         img.style.width = '24px';
         img.style.height = '24px';
         img.style.flexShrink = '0';

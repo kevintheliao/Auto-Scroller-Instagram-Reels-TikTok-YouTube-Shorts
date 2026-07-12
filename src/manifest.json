@@ -39,7 +39,9 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "icon48.png"
+        "icon48.png",
+        "icon48-youtube.png",
+        "icon48-tiktok.png"
       ],
       "matches": [
         "https://www.instagram.com/*",
