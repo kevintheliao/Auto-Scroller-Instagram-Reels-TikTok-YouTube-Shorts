@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Auto Scroller — You're all set</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f5f5f5;
+            color: #333;
+            font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+        }
+
+        .wrap {
+            max-width: 460px;
+            width: 100%;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .logo {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 12px;
+        }
+
+        h1 {
+            font-size: 22px;
+            margin: 0 0 12px 0;
+        }
+
+        p.lead {
+            font-size: 14px;
+            line-height: 1.5;
+            color: #555;
+            margin: 0 0 20px 0;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            padding: 16px;
+            margin-bottom: 16px;
+            text-align: left;
+        }
+
+        .card h2 {
+            font-size: 14px;
+            margin: 0 0 10px 0;
+            text-align: center;
+        }
+
+        .sites {
+            display: flex;
+            gap: 8px;
+        }
+
+        .sites a {
+            flex: 1;
+            display: block;
+            text-align: center;
+            padding: 10px 8px;
+            border-radius: 8px;
+            background: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            color: #333;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .sites a:hover {
+            background: #ececec;
+        }
+
+        ul.shortcuts {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        ul.shortcuts li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            font-size: 13px;
+        }
+
+        kbd {
+            font-family: inherit;
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            min-width: 26px;
+            text-align: center;
+        }
+
+        .note {
+            font-size: 12px;
+            color: #7a7a7a;
+            line-height: 1.5;
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <img class="logo" src="icon128.png" alt="Auto Scroller logo">
+        <h1>Auto Scroller is ready</h1>
+        <p class="lead">
+            Open Instagram Reels, TikTok, or YouTube Shorts and the next video
+            plays automatically when one ends. Tabs you already had open are
+            activated too.
+        </p>
+
+        <div class="card">
+            <h2>Try it now</h2>
+            <div class="sites">
+                <a href="https://www.instagram.com/reels/" target="_blank" rel="noopener noreferrer">Instagram Reels</a>
+                <a href="https://www.tiktok.com/" target="_blank" rel="noopener noreferrer">TikTok</a>
+                <a href="https://www.youtube.com/shorts/" target="_blank" rel="noopener noreferrer">YouTube Shorts</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Keyboard shortcuts</h2>
+            <ul class="shortcuts">
+                <li><span>Toggle auto-scroll</span><kbd>R</kbd></li>
+                <li><span>Like</span><kbd>F</kbd></li>
+                <li><span>Open comments</span><kbd>C</kbd></li>
+                <li><span>Mute / unmute</span><kbd>M</kbd></li>
+            </ul>
+            <p class="note">On YouTube Shorts, like is <kbd>E</kbd> — M, C, and F stay YouTube's own shortcuts.</p>
+        </div>
+
+        <p class="note">
+            You can turn auto-scroll off any time with <kbd>R</kbd>, from the
+            card on the page, or from the extension's toolbar popup.
+        </p>
+    </div>
+</body>
+
+</html>

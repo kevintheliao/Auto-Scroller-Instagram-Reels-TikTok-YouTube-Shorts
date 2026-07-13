@@ -7,11 +7,14 @@ const SITE = (() => {
 })();
 const SITE_LABEL = SITE === 'tiktok' ? 'TikTok' : SITE === 'youtube' ? 'YouTube Shorts' : 'Instagram';
 
-// Instagram: clear space at top right. TikTok/YouTube: fixed header bar up
-// there (upload/inbox/profile), so drop the toast below it, near the edge.
+// Instagram has clear space top-right; TikTok/YouTube have a header bar there.
 const TOAST_POSITION = SITE === 'instagram'
     ? { top: '20px', right: '80px', muteTop: '70px' }
     : { top: '72px', right: '16px', muteTop: '126px' };
+
+// First review ask after 30 scrolls; "Maybe Later" snoozes 200 more.
+const REVIEW_FIRST_ASK_AT = 30;
+const REVIEW_SNOOZE_INTERACTIONS = 200;
 
 class ReviewPopupManager {
     constructor() {
@@ -20,7 +23,7 @@ class ReviewPopupManager {
         this.reviewBtn = null;
         this.laterBtn = null;
         this.interactionCount = 0;
-        this.lastShownInteraction = 0;
+        this.reviewNextAt = REVIEW_FIRST_ASK_AT;
         this.reviewPopupDismissed = false;
         this.initialized = false;
         this.stateLoaded = false;
@@ -247,44 +250,36 @@ class ReviewPopupManager {
 
     setupEventListeners() {
         if (this.closeBtn) {
-            this.closeBtn.addEventListener('click', () => this.hidePopup());
+            this.closeBtn.addEventListener('click', () => this.dismissPopup());
         }
         if (this.reviewBtn) {
             this.reviewBtn.addEventListener('click', () => {
                 chrome.runtime.sendMessage({
                     action: 'openReviewPage',
-                    url: 'https://chromewebstore.google.com/detail/instagram-auto-scroller/innfihfpikaokkljfakkdjahjjbjmnmc/reviews?hl=en&authuser=4'
+                    url: 'https://chromewebstore.google.com/detail/innfihfpikaokkljfakkdjahjjbjmnmc/reviews'
                 });
                 this.dismissPopup();
             });
         }
         if (this.laterBtn) {
-            this.laterBtn.addEventListener('click', () => this.hidePopup());
+            this.laterBtn.addEventListener('click', () => this.snoozePopup());
         }
     }
 
     loadState() {
         try {
-            chrome.storage.sync.get(['reviewInteractionCount', 'reviewLastShownAt', 'reviewPopupDismissed'], (data) => {
+            chrome.storage.sync.get(['reviewInteractionCount', 'reviewNextAt', 'reviewPopupDismissed'], (data) => {
                 const res = data || {};
                 this.interactionCount = res.reviewInteractionCount || 0;
-                this.lastShownInteraction = res.reviewLastShownAt || 0;
+                this.reviewNextAt = res.reviewNextAt || REVIEW_FIRST_ASK_AT;
                 this.reviewPopupDismissed = res.reviewPopupDismissed || false;
 
                 if (!this.popupCard) {
                     this.setupElements();
                 }
 
-                console.log('[ReviewPopup] State loaded:', {
-                    count: this.interactionCount,
-                    dismissed: this.reviewPopupDismissed
-                });
-                console.log('[ReviewPopup] If you need to reset the popup state for testing, run: window.reviewPopupManager.resetState()');
-
-                // Mark state as loaded and process any pending interactions
                 this.stateLoaded = true;
                 if (this.pendingInteractions > 0) {
-                    console.log('[ReviewPopup] Processing', this.pendingInteractions, 'pending interactions');
                     const pending = this.pendingInteractions;
                     this.pendingInteractions = 0;
                     for (let i = 0; i < pending; i++) {
@@ -293,7 +288,6 @@ class ReviewPopupManager {
                 }
             });
         } catch (e) {
-            console.log('[ReviewPopup] Could not load state:', e);
             this.stateLoaded = true;
         }
     }
@@ -302,67 +296,38 @@ class ReviewPopupManager {
         try {
             chrome.storage.sync.set({
                 reviewInteractionCount: this.interactionCount,
-                reviewLastShownAt: this.lastShownInteraction,
+                reviewNextAt: this.reviewNextAt,
                 reviewPopupDismissed: this.reviewPopupDismissed
             });
-        } catch (e) {
-            console.log('[ReviewPopup] Could not save state:', e);
-        }
+        } catch (e) { }
     }
 
     shouldShowPopup() {
         if (this.reviewPopupDismissed) return false;
-
-        if (this.interactionCount === 101) {
-            this.interactionCount = 50;
-        }
-
-        const count = this.interactionCount;
-        const frequencies = [3, 5, 10, 20, 50, 100];
-
-        return frequencies.includes(count);
+        return this.interactionCount >= this.reviewNextAt;
     }
 
     recordInteraction() {
         if (!this.stateLoaded) {
-            console.log('[ReviewPopup] State not loaded yet, queueing interaction...');
             this.pendingInteractions++;
             return;
         }
 
-        const countBefore = this.interactionCount;
         this.interactionCount++;
-        console.log('[ReviewPopup] Interaction recorded:', countBefore, '->', this.interactionCount);
-
         this.saveState();
 
-        const shouldShow = this.shouldShowPopup();
-        console.log('[ReviewPopup] Should show popup?', shouldShow, '(count:', this.interactionCount, ', dismissed:', this.reviewPopupDismissed, ')');
-
-        if (shouldShow) {
-            console.log('[ReviewPopup] Showing popup at interaction', this.interactionCount);
-            this.lastShownInteraction = this.interactionCount;
-            this.saveState();
+        if (this.shouldShowPopup()) {
             this.showPopup();
-        } else {
-            console.log('[ReviewPopup] Skipping popup (frequencies: [3,5,10,20,50,100,200,500,1000,2000,5000])');
         }
     }
 
     showPopup() {
-        console.log('[ReviewPopup] showPopup() called, popupCard exists?', !!this.popupCard);
-
         if (!this.popupCard || !document.getElementById('review-popup-card')) {
-            console.log('[ReviewPopup] Creating/re-attaching popup card...');
             this.setupElements();
         }
         if (this.popupCard) {
-            console.log('[ReviewPopup] Removing hidden class, card HTML:', this.popupCard.outerHTML.substring(0, 100));
             this.popupCard.classList.remove('review-popup-hidden');
             this.popupCard.classList.remove('review-popup-closing');
-            console.log('[ReviewPopup] Popup shown, classes:', this.popupCard.className);
-        } else {
-            console.log('[ReviewPopup] ERROR: popupCard is null after setupElements!');
         }
     }
 
@@ -375,21 +340,13 @@ class ReviewPopupManager {
                     this.popupCard.classList.remove('review-popup-closing');
                 }
             }, 100);
-            console.log('[ReviewPopup] Popup hidden');
         }
     }
 
-    hidePopupForever() {
-        if (localStorage.getItem('popupHidden') === 'true') {
-            this.popupElement.style.display = 'none'; 
-            return; 
-        }
-
-        this.reviewBtn.addEventListener('click', () => {
-            this.popupElement.style.display = 'none'; 
-
-            localStorage.setItem('popupHidden', 'true');
-        }, { once: true });
+    snoozePopup() {
+        this.reviewNextAt = this.interactionCount + REVIEW_SNOOZE_INTERACTIONS;
+        this.saveState();
+        this.hidePopup();
     }
 
     dismissPopup() {
@@ -400,7 +357,7 @@ class ReviewPopupManager {
 
     resetState() {
         this.interactionCount = 0;
-        this.lastShownInteraction = 0;
+        this.reviewNextAt = REVIEW_FIRST_ASK_AT;
         this.reviewPopupDismissed = false;
         this.saveState();
     }
@@ -482,8 +439,7 @@ function startWatchdog() {
     watchdogIntervalId = setInterval(runWatchdog, 400);
 }
 
-// TikTok's comment column is anchored to the right edge, exactly where the
-// card lives; when it's open, return its left edge so the card can dodge it.
+// TikTok's comment panel overlaps the card; return its left edge so the card can dodge.
 function getTikTokCommentPanelLeft() {
     if (SITE !== 'tiktok') return null;
     const sels = ['[data-e2e="comment-list"]', '[class*="CommentListContainer"]', '[class*="CommentList"]'];
@@ -606,8 +562,7 @@ function getActiveShortRenderer() {
 }
 
 function youtubeNextShort() {
-    // Checked one selector at a time: a combined selector can return a hidden
-    // zero-size "Next" button that sits earlier in the DOM than the real one.
+    // One selector at a time — a combined query can match a hidden zero-size Next first.
     const candidates = [
         '#navigation-button-down button',
         'button[aria-label="Next video"]',
@@ -691,8 +646,7 @@ function setupVideoEndListener() {
     video.addEventListener("ended", handler);
 
     if (SITE === 'tiktok' || SITE === 'youtube') {
-        // These players loop videos, so "ended" never fires. Kill the loop and
-        // also detect a playback wrap in case the player re-enables it.
+        // These players loop, so "ended" never fires; unloop and detect wrap-around.
         try {
             video.loop = false;
         } catch (_) { }
@@ -1036,9 +990,7 @@ function getLikeToggleTargetForVideo(video) {
     return closestClickTarget(svg);
 }
 
-// TikTok and Instagram's audio control ignore synthetic clicks (isTrusted
-// check). Mark the button and signal main-world.js, which calls the React
-// onClick prop directly.
+// IG/TikTok ignore synthetic clicks (isTrusted); main-world.js calls React's onClick directly.
 function reactPropsClick(el) {
     if (!el) return;
     try {
@@ -1156,8 +1108,7 @@ document.addEventListener('keydown', (e) => {
         }
     }
 
-    // YouTube already binds F (fullscreen), C (captions) and M (mute) natively;
-    // only E (like) is ours there.
+    // YouTube owns F/C/M natively; only E (like) is ours.
     if (SITE === 'youtube') {
         if (e.key.toLowerCase() === 'e' && isRelevantPage()) {
             const v = getCurrentVideo();
@@ -1223,7 +1174,7 @@ function injectAutoScrollToastStyles() {
             transition: right 0.2s ease;
         }
 
-        /* Neutralize host-page CSS so the card renders identically on every site. */
+        /* Shield card from host-page CSS. */
         #autoscroll-toast-unique-v1 * {
             box-sizing: border-box;
             font-family: inherit;
@@ -1593,8 +1544,8 @@ function showMuteToast(muted) {
         el._muteToastTimeout = setTimeout(() => {
             el.classList.add('hide');
             setTimeout(() => {
-                el.remove(); // Remove from DOM so animation re-triggers next time
-            }, 300); // Match animation duration
+                el.remove(); // so animation re-triggers next time
+            }, 300);
         }, 2000);
     } catch (e) { }
 }

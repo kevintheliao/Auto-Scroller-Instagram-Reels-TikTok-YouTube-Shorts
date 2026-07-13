@@ -11,11 +11,40 @@ function startUp() {
     })
 }
 
-chrome.runtime.onInstalled.addListener((details) => {
-    // Only default on fresh install; an update must not reset the user's toggle.
-    if (details.reason === "install") {
-        chrome.storage.sync.set({ enabled: false });
+const CONTENT_SCRIPT_URLS = [
+    "https://www.instagram.com/*",
+    "https://www.tiktok.com/*",
+    "https://www.youtube.com/*",
+];
+
+chrome.runtime.onInstalled.addListener(async (details) => {
+    // Fresh install only; updates keep the user's toggle.
+    if (details.reason !== "install") return;
+
+    chrome.storage.sync.set({ enabled: true });
+
+    // Tabs open at install time have no content scripts until reload — inject now.
+    const tabs = await chrome.tabs.query({ url: CONTENT_SCRIPT_URLS });
+    for (const tab of tabs) {
+        if (!tab.id) continue;
+        try {
+            await chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                files: ["content.js"],
+            });
+            if (!tab.url.includes("youtube.com")) {
+                await chrome.scripting.executeScript({
+                    target: { tabId: tab.id },
+                    files: ["main-world.js"],
+                    world: "MAIN",
+                });
+            }
+        } catch (_) {
+            // uninjectable tab (discarded etc.); skip
+        }
     }
+
+    chrome.tabs.create({ url: chrome.runtime.getURL("welcome.html") });
 });
 
 chrome.runtime.onStartup.addListener(startUp)

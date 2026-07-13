@@ -1,13 +1,19 @@
 {
   "manifest_version": 3,
   "name": "Auto Scroller — Instagram Reels, TikTok & YouTube Shorts",
-  "version": "2.1.6",
+  "version": "2.2.0",
   "description": "Auto-scroll Instagram Reels, TikTok & YouTube Shorts hands-free. Plays next video when one ends. Simple hotkey controls.",
   "action": {
     "default_popup": "popup.html"
   },
   "permissions": [
-    "storage"
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://www.instagram.com/*",
+    "https://www.tiktok.com/*",
+    "https://www.youtube.com/*"
   ],
   "content_scripts": [
     {
