@@ -371,6 +371,7 @@ let autoScrollEnabled = false;
 let watchdogIntervalId = null;
 let toastUpdateIntervalId = null;
 let pendingScrollOnCommentsClose = false;
+let lastAutoScrollAt = 0;
 let preferredMuteState = false;
 let preferredMuteStateApplied = false;
 
@@ -599,6 +600,11 @@ function youtubeNextShort() {
 function scrollDown() {
     // YouTube keeps the comment panel open across shorts, so scrolling with it open is fine.
     if (SITE !== 'youtube' && areCommentsOpen()) return;
+
+    // "ended" and the loop-wrap detector can both fire for the same video end; allow one scroll per window.
+    const now = Date.now();
+    if (now - lastAutoScrollAt < 1500) return;
+    lastAutoScrollAt = now;
 
     if (SITE === 'youtube') {
         if (!isRelevantPage()) return;
