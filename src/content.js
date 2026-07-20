@@ -456,8 +456,20 @@ function getTikTokCommentPanelLeft() {
     return null;
 }
 
+// YouTube's comment panel overlaps the card the same way; dodge only when its right edge reaches the card zone.
+function getYouTubeCommentPanelLeft() {
+    if (SITE !== 'youtube') return null;
+    const panel = document.querySelector('ytd-engagement-panel-section-list-renderer[visibility="ENGAGEMENT_PANEL_VISIBILITY_EXPANDED"]');
+    if (!panel) return null;
+    const r = panel.getBoundingClientRect();
+    if (r.width > 150 && r.height > 200 && r.right > window.innerWidth - 230) {
+        return r.left;
+    }
+    return null;
+}
+
 function currentToastRight() {
-    const panelLeft = getTikTokCommentPanelLeft();
+    const panelLeft = getTikTokCommentPanelLeft() ?? getYouTubeCommentPanelLeft();
     if (panelLeft == null) return TOAST_POSITION.right;
     return Math.round(window.innerWidth - panelLeft + 12) + 'px';
 }
@@ -585,7 +597,8 @@ function youtubeNextShort() {
 }
 
 function scrollDown() {
-    if (areCommentsOpen()) return;
+    // YouTube keeps the comment panel open across shorts, so scrolling with it open is fine.
+    if (SITE !== 'youtube' && areCommentsOpen()) return;
 
     if (SITE === 'youtube') {
         if (!isRelevantPage()) return;
@@ -635,7 +648,7 @@ function setupVideoEndListener() {
     }
 
     const handler = () => {
-        if (areCommentsOpen()) {
+        if (SITE !== 'youtube' && areCommentsOpen()) {
             pendingScrollOnCommentsClose = true;
         } else {
             scrollDown();
@@ -1007,6 +1020,17 @@ function youtubeToggleLike(video) {
     if (btn) safeClick(btn);
 }
 
+function youtubeToggleComments() {
+    const openPanel = document.querySelector('ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-comments-section"][visibility="ENGAGEMENT_PANEL_VISIBILITY_EXPANDED"]');
+    if (openPanel) {
+        const close = openPanel.querySelector('#visibility-button button, button[aria-label="Close"]');
+        if (close && safeClick(close)) return;
+    }
+    const shell = getActiveShortRenderer() || document;
+    const btn = shell.querySelector('#comments-button button, button[aria-label*="comment" i]');
+    if (btn) safeClick(btn);
+}
+
 function toggleLikeForVideo(video) {
     if (SITE === 'tiktok') {
         const icon = pickNearestToVideo(video, '[data-e2e="like-icon"], [data-e2e="browse-like-icon"]');
@@ -1108,11 +1132,18 @@ document.addEventListener('keydown', (e) => {
         }
     }
 
-    // YouTube owns F/C/M natively; only E (like) is ours.
+    // YouTube owns F/M natively; E (like) and C (comments) are ours.
     if (SITE === 'youtube') {
-        if (e.key.toLowerCase() === 'e' && isRelevantPage()) {
+        if (!isRelevantPage()) return;
+        const k = e.key.toLowerCase();
+        if (k === 'e') {
             const v = getCurrentVideo();
             if (v) youtubeToggleLike(v);
+        } else if (k === 'c') {
+            // Steal C from YouTube's captions toggle; listener is capture-phase so this runs first.
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            youtubeToggleComments();
         }
         return;
     }
@@ -1132,7 +1163,7 @@ document.addEventListener('keydown', (e) => {
         if (!isRelevantPage()) return;
         toggleAudioForVideo(currentVideo);
     }
-});
+}, true);
 
 function injectAutoScrollToastStyles() {
     if (document.getElementById('autoscroll-toast-styles')) return;
@@ -1401,12 +1432,12 @@ function showAutoScrollToast(enabled) {
                     <kbd>E</kbd>
                 </li>
                 <li>
-                    <span class="label">Mute/Unmute</span>
-                    <kbd>M</kbd>
+                    <span class="label">Open Comments</span>
+                    <kbd>C</kbd>
                 </li>
                 <li>
-                    <span class="label">Captions</span>
-                    <kbd>C</kbd>
+                    <span class="label">Mute/Unmute</span>
+                    <kbd>M</kbd>
                 </li>` : `
                 <li>
                     <span class="label">Like</span>
@@ -1421,7 +1452,7 @@ function showAutoScrollToast(enabled) {
                     <kbd>M</kbd>
                 </li>`;
         const shortcutNote = SITE === 'youtube'
-            ? '<p class="toast-note">M, C and F are YouTube built-ins</p>'
+            ? '<p class="toast-note">M and F are YouTube built-ins</p>'
             : '';
         card2.innerHTML = `
             <h2 class="card-title">Keyboard shortcuts</h2>
