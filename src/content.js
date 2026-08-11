@@ -3,9 +3,10 @@ const SITE = (() => {
     if (/(^|\.)instagram\.com$/.test(host)) return 'instagram';
     if (/(^|\.)tiktok\.com$/.test(host)) return 'tiktok';
     if (/(^|\.)youtube\.com$/.test(host)) return 'youtube';
+    if (/(^|\.)facebook\.com$/.test(host)) return 'facebook';
     return null;
 })();
-const SITE_LABEL = SITE === 'tiktok' ? 'TikTok' : SITE === 'youtube' ? 'YouTube Shorts' : 'Instagram';
+const SITE_LABEL = SITE === 'tiktok' ? 'TikTok' : SITE === 'youtube' ? 'YouTube Shorts' : SITE === 'facebook' ? 'Facebook Reels' : 'Instagram';
 
 // Instagram has clear space top-right; TikTok/YouTube have a header bar there.
 const TOAST_POSITION = SITE === 'instagram'
@@ -427,7 +428,7 @@ function runWatchdog() {
         try {
             setupVideoEndListener();
         } catch (_) { }
-        if ((SITE === 'tiktok' || SITE === 'youtube') && lastVideo) {
+        if ((SITE === 'tiktok' || SITE === 'youtube' || SITE === 'facebook') && lastVideo) {
             try {
                 if (lastVideo.loop) lastVideo.loop = false;
             } catch (_) { }
@@ -469,8 +470,20 @@ function getYouTubeCommentPanelLeft() {
     return null;
 }
 
+// Facebook's comment panel is a side panel (role="complementary"), same dodge need as TikTok/YouTube.
+function getFacebookCommentPanelLeft() {
+    if (SITE !== 'facebook') return null;
+    const panel = document.querySelector('[role="complementary"]');
+    if (!panel) return null;
+    const r = panel.getBoundingClientRect();
+    if (r.width >= 200 && r.height >= 300 && r.right > window.innerWidth - 400) {
+        return r.left;
+    }
+    return null;
+}
+
 function currentToastRight() {
-    const panelLeft = getTikTokCommentPanelLeft() ?? getYouTubeCommentPanelLeft();
+    const panelLeft = getTikTokCommentPanelLeft() ?? getYouTubeCommentPanelLeft() ?? getFacebookCommentPanelLeft();
     if (panelLeft == null) return TOAST_POSITION.right;
     return Math.round(window.innerWidth - panelLeft + 12) + 'px';
 }
@@ -597,6 +610,14 @@ function youtubeNextShort() {
     return false;
 }
 
+// Facebook's reel feed is virtualized; scrollIntoView on the next <video> doesn't
+// advance it, only its own "Next Card" control does.
+function facebookNextReel() {
+    const btn = document.querySelector('[role="button"][aria-label="Next Card"]');
+    if (btn && isSvgVisible(btn)) return safeClick(btn);
+    return false;
+}
+
 function scrollDown() {
     // YouTube keeps the comment panel open across shorts, so scrolling with it open is fine.
     if (SITE !== 'youtube' && areCommentsOpen()) return;
@@ -612,6 +633,15 @@ function scrollDown() {
             reviewPopupManager.recordInteraction();
         }
         youtubeNextShort();
+        return;
+    }
+
+    if (SITE === 'facebook') {
+        if (!isRelevantPage()) return;
+        if (reviewPopupManager) {
+            reviewPopupManager.recordInteraction();
+        }
+        facebookNextReel();
         return;
     }
 
@@ -664,7 +694,7 @@ function setupVideoEndListener() {
     video._autoScrollHandler = handler;
     video.addEventListener("ended", handler);
 
-    if (SITE === 'tiktok' || SITE === 'youtube') {
+    if (SITE === 'tiktok' || SITE === 'youtube' || SITE === 'facebook') {
         // These players loop, so "ended" never fires; unloop and detect wrap-around.
         try {
             video.loop = false;
@@ -706,6 +736,14 @@ function areCommentsOpen() {
         if (panel) {
             const r = panel.getBoundingClientRect();
             if (r.width >= 120 && r.height >= 120) return true;
+        }
+        return false;
+    }
+    if (SITE === 'facebook') {
+        const panel = document.querySelector('[role="complementary"]');
+        if (panel) {
+            const r = panel.getBoundingClientRect();
+            if (r.width >= 200 && r.height >= 300) return true;
         }
         return false;
     }
@@ -980,8 +1018,26 @@ function pickNearestToVideo(video, selector) {
     return best;
 }
 
+// Facebook's <video>.muted never reflects real state (it's always true); the
+// on-screen Mute/Unmute button's aria-label is the only reliable signal.
+function getFacebookAudioToggle(video) {
+    const btn = pickNearestToVideo(video, '[role="button"][aria-label="Mute"], [role="button"][aria-label="Unmute"]');
+    if (!btn) return { clickEl: null, state: 'unknown' };
+    const label = btn.getAttribute('aria-label');
+    return { clickEl: btn, state: label === 'Mute' ? 'unmuted' : 'muted' };
+}
+
 function toggleAudioForVideo(video) {
     if (!video) return;
+    if (SITE === 'facebook') {
+        const { clickEl, state } = getFacebookAudioToggle(video);
+        if (clickEl) {
+            safeClick(clickEl);
+            if (state === 'unmuted') showMuteToast(true);
+            else if (state === 'muted') showMuteToast(false);
+            return;
+        }
+    }
     if (SITE !== 'instagram') {
         try {
             video.muted = !video.muted;
@@ -1044,6 +1100,11 @@ function toggleLikeForVideo(video) {
         if (target) reactPropsClick(target);
         return;
     }
+    if (SITE === 'facebook') {
+        const target = pickNearestToVideo(video, '[role="button"][aria-label="Like"], [role="button"][aria-label="Remove Like"]');
+        if (target) safeClick(target);
+        return;
+    }
     const target = getLikeToggleTargetForVideo(video);
     if (target) safeClick(target);
 }
@@ -1079,6 +1140,11 @@ function toggleCommentsForVideo(video) {
         if (target) reactPropsClick(target);
         return;
     }
+    if (SITE === 'facebook') {
+        const target = pickNearestToVideo(video, '[role="button"][aria-label="Comment"]');
+        if (target) safeClick(target);
+        return;
+    }
     const target = getCommentToggleTargetForVideo(video);
     if (target) safeClick(target);
 }
@@ -1089,6 +1155,7 @@ function isRelevantPage() {
         if (SITE === 'instagram') return !p.startsWith('/direct');
         if (SITE === 'tiktok') return !p.startsWith('/messages');
         if (SITE === 'youtube') return p.startsWith('/shorts');
+        if (SITE === 'facebook') return p.startsWith('/reel');
         return false;
     } catch (e) {
         return false;

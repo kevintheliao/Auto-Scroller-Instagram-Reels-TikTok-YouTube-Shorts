@@ -15,6 +15,7 @@ const CONTENT_SCRIPT_URLS = [
     "https://www.instagram.com/*",
     "https://www.tiktok.com/*",
     "https://www.youtube.com/*",
+    "https://www.facebook.com/*",
 ];
 
 chrome.runtime.onInstalled.addListener(async (details) => {
