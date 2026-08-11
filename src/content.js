@@ -614,8 +614,15 @@ function youtubeNextShort() {
 // advance it, only its own "Next Card" control does.
 function facebookNextReel() {
     const btn = document.querySelector('[role="button"][aria-label="Next Card"]');
-    if (btn && isSvgVisible(btn)) return safeClick(btn);
-    return false;
+    if (!btn || !isSvgVisible(btn)) return false;
+    // safeClick's full pointerdown/mousedown+click cascade double-advances this
+    // control (it reacts on mousedown too); a plain click only fires once.
+    try {
+        btn.click();
+        return true;
+    } catch (_) {
+        return false;
+    }
 }
 
 function scrollDown() {
