@@ -684,6 +684,10 @@ function setupVideoEndListener() {
     }
 
     const handler = () => {
+        // Native "ended" and the timeupdate wrap-around detector both route here for
+        // the same video end; without this guard both fire and skip two videos.
+        if (video._autoScrollHandled) return;
+        video._autoScrollHandled = true;
         if (SITE !== 'youtube' && areCommentsOpen()) {
             pendingScrollOnCommentsClose = true;
         } else {
