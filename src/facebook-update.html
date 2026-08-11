@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Auto Scroller — Facebook Reels support added</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f5f5f5;
+            color: #333;
+            font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+        }
+
+        .wrap {
+            max-width: 460px;
+            width: 100%;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .logo {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 12px;
+        }
+
+        .badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            color: #1877f2;
+            background: #e7f0fe;
+            border-radius: 999px;
+            padding: 4px 10px;
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            font-size: 22px;
+            margin: 0 0 12px 0;
+        }
+
+        p.lead {
+            font-size: 14px;
+            line-height: 1.5;
+            color: #555;
+            margin: 0 0 20px 0;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            padding: 16px;
+            margin-bottom: 16px;
+            text-align: left;
+        }
+
+        .card h2 {
+            font-size: 14px;
+            margin: 0 0 10px 0;
+            text-align: center;
+        }
+
+        .cta {
+            display: block;
+            text-align: center;
+            padding: 12px 8px;
+            border-radius: 8px;
+            background: #1877f2;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .cta:hover {
+            background: #1665d8;
+        }
+
+        ul.shortcuts {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        ul.shortcuts li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            font-size: 13px;
+        }
+
+        kbd {
+            font-family: inherit;
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            min-width: 26px;
+            text-align: center;
+        }
+
+        .note {
+            font-size: 12px;
+            color: #7a7a7a;
+            line-height: 1.5;
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <img class="logo" src="icon128.png" alt="Auto Scroller logo">
+        <div class="badge">What's new</div>
+        <h1>Facebook Reels is now supported</h1>
+        <p class="lead">
+            Auto Scroller now works on Facebook Reels too — same hands-free
+            auto-scroll, hotkeys, and on-page control card as Instagram, TikTok,
+            and YouTube Shorts.
+        </p>
+
+        <div class="card">
+            <a class="cta" href="https://www.facebook.com/reels/" target="_blank" rel="noopener noreferrer">Try it on Facebook Reels</a>
+        </div>
+
+        <div class="card">
+            <h2>Keyboard shortcuts</h2>
+            <ul class="shortcuts">
+                <li><span>Toggle auto-scroll</span><kbd>R</kbd></li>
+                <li><span>Like</span><kbd>F</kbd></li>
+                <li><span>Open comments</span><kbd>C</kbd></li>
+                <li><span>Mute / unmute</span><kbd>M</kbd></li>
+            </ul>
+        </div>
+
+        <p class="note">
+            Nothing else changed — your toggle and settings carried over as-is.
+        </p>
+    </div>
+</body>
+
+</html>

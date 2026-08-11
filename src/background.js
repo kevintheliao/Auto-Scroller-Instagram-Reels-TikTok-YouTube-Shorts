@@ -48,6 +48,23 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     chrome.tabs.create({ url: chrome.runtime.getURL("welcome.html") });
 });
 
+// Only for users upgrading from before Facebook Reels support (2.4.0) — won't
+// resurface on later updates.
+function isOlderThan(version, target) {
+    const a = version.split(".").map(Number);
+    const b = target.split(".").map(Number);
+    for (let i = 0; i < 3; i++) {
+        if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) < (b[i] || 0);
+    }
+    return false;
+}
+
+chrome.runtime.onInstalled.addListener((details) => {
+    if (details.reason !== "update") return;
+    if (!details.previousVersion || !isOlderThan(details.previousVersion, "2.4.0")) return;
+    chrome.tabs.create({ url: chrome.runtime.getURL("facebook-update.html") });
+});
+
 chrome.runtime.onStartup.addListener(startUp)
 chrome.runtime.onInstalled.addListener(startUp)
 
