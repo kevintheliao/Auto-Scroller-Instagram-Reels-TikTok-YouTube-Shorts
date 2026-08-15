@@ -13,6 +13,9 @@ const TOAST_POSITION = SITE === 'instagram'
     ? { top: '20px', right: '80px', muteTop: '70px' }
     : { top: '72px', right: '16px', muteTop: '126px' };
 
+const EYE_OPEN_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_CLOSED_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.3 20.3 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a20.3 20.3 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>';
+
 // First review ask after 30 scrolls; "Maybe Later" snoozes 200 more.
 const REVIEW_FIRST_ASK_AT = 30;
 const REVIEW_SNOOZE_INTERACTIONS = 200;
@@ -369,6 +372,7 @@ window.reviewPopupManager = reviewPopupManager;
 
 let lastVideo = null;
 let autoScrollEnabled = false;
+let cardHidden = false;
 let watchdogIntervalId = null;
 let toastUpdateIntervalId = null;
 let pendingScrollOnCommentsClose = false;
@@ -537,11 +541,12 @@ function initializeAutoScrollCard() {
     }
 }
 
-chrome.storage.sync.get(["enabled", "preferredMuteState"], (data) => {
+chrome.storage.sync.get(["enabled", "preferredMuteState", "cardHidden"], (data) => {
     const res = data || {};
     const enabled = res.enabled;
     const savedMuteState = res.preferredMuteState;
     autoScrollEnabled = enabled;
+    cardHidden = !!res.cardHidden;
     preferredMuteState = savedMuteState || false;
     preferredMuteStateApplied = false;
     if (enabled) {
@@ -1270,7 +1275,7 @@ function injectAutoScrollToastStyles() {
             right: ${TOAST_POSITION.right};
             top: ${TOAST_POSITION.top};
             z-index: 2147483647;
-            width: 190px;
+            width: 214px;
             background: #f5f5f5;
             color: #333;
             border-radius: 8px;
@@ -1451,6 +1456,47 @@ function injectAutoScrollToastStyles() {
             transform: rotate(45deg);
             display: inline-block;
         }
+
+        .toast-eye-btn {
+            padding: 2px;
+            border: none;
+            background: transparent;
+            color: #555;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .toast-eye-btn:hover {
+            color: #111;
+        }
+
+        #autoscroll-toast-unique-v1.toast-peek {
+            width: auto;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            cursor: default;
+        }
+
+        .toast-peek-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid #ddd;
+            background: #f5f5f5;
+            color: #555;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .toast-peek-btn:hover {
+            color: #111;
+        }
     `;
     document.documentElement.appendChild(style);
 }
@@ -1476,6 +1522,23 @@ function showAutoScrollToast(enabled) {
 
         el.innerHTML = '';
         el.style.display = 'flex';
+
+        if (cardHidden) {
+            el.classList.add('toast-peek');
+            const peekBtn = document.createElement('button');
+            peekBtn.className = 'toast-peek-btn';
+            peekBtn.setAttribute('aria-label', 'Show Auto Scroll card');
+            peekBtn.innerHTML = EYE_CLOSED_ICON;
+            peekBtn.addEventListener('click', () => {
+                cardHidden = false;
+                try { chrome.storage.sync.set({ cardHidden: false }); } catch (_) { }
+                showAutoScrollToast(autoScrollEnabled);
+            });
+            el.appendChild(peekBtn);
+            return;
+        }
+        el.classList.remove('toast-peek');
+
         const header = document.createElement('div');
         header.className = 'toast-header';
 
@@ -1490,6 +1553,18 @@ function showAutoScrollToast(enabled) {
         text.id = 'autoscroll-text';
         text.textContent = `Auto Scroll: ${enabled ? 'On' : 'Off'}`;
         header.appendChild(text);
+
+        const eyeBtn = document.createElement('button');
+        eyeBtn.className = 'toast-eye-btn';
+        eyeBtn.setAttribute('aria-label', 'Hide Auto Scroll card');
+        eyeBtn.innerHTML = EYE_OPEN_ICON;
+        eyeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            cardHidden = true;
+            try { chrome.storage.sync.set({ cardHidden: true }); } catch (_) { }
+            showAutoScrollToast(autoScrollEnabled);
+        });
+        header.appendChild(eyeBtn);
 
         const chevron = document.createElement('span');
         chevron.className = 'toast-chevron';
@@ -1677,6 +1752,9 @@ chrome.storage.onChanged.addListener((changes, area) => {
     }
     if (changes.preferredMuteState) {
         preferredMuteState = !!changes.preferredMuteState.newValue;
+    }
+    if (changes.cardHidden) {
+        cardHidden = !!changes.cardHidden.newValue;
     }
 });
 
