@@ -721,6 +721,12 @@ function setupVideoEndListener() {
             const t = video.currentTime || 0;
             const last = video._autoScrollLastTime || 0;
             video._autoScrollLastTime = t;
+            // TikTok/YouTube Shorts recycle the same <video> node for the next item,
+            // so video._autoScrollHandled sticks from the prior video's end unless
+            // cleared once playback is clearly past the wrap-detection zone.
+            if (video._autoScrollHandled && t > 1.5) {
+                video._autoScrollHandled = false;
+            }
             if (!autoScrollEnabled) return;
             if (!d || !isFinite(d) || d < 2) return;
             if (last > d - 0.6 && t < 0.35 && last - t > 1) {
